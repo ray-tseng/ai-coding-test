@@ -286,7 +286,7 @@ export default function App() {
           <motion.h2 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-4xl sm:text-5xl font-bold text-slate-900 mb-4 tracking-tight"
+            className="text-2xl sm:text-3xl font-bold text-slate-900 mb-4 tracking-tight"
           >
             知名財經 YouTuber <span className="text-slate-400">AI 自動摘要</span>
           </motion.h2>
