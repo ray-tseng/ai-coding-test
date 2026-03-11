@@ -1,4 +1,5 @@
 import express from "express";
+import basicAuth from "express-basic-auth";
 import { createServer as createViteServer } from "vite";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
@@ -74,7 +75,7 @@ async function sendSummaryEmail(to: string[], subject: string, body: string) {
   `;
 
   await transporter.sendMail({
-    from: process.env.FROM_EMAIL || process.env.SMTP_USER,
+    from: `"財經 AI 秘書" <${process.env.SMTP_USER}>`,
     to: to.join(", "),
     subject,
     text: body,
@@ -144,7 +145,7 @@ async function processChannel(channel: { id: string, name: string }) {
     console.log(`New video found for ${channel.name}:`, latestVideo.title);
 
     // 3. Send Email (Notification only, since Gemini API cannot be called from backend)
-    const emailsStr = process.env.CRON_EMAILS || "r76021061@gmail.com";
+    const emailsStr = process.env.CRON_EMAILS || "r76021061@gmail.com,rose.huang@gmail.com";
     const emails = emailsStr.split(",").map(e => e.trim());
     
     const body = `
@@ -156,7 +157,7 @@ async function processChannel(channel: { id: string, name: string }) {
 
 > 💡 **溫馨提示：** 
 > 由於平台安全性限制，AI 摘要功能必須在您的瀏覽器中執行。
-> 請點擊下方連結前往「財經 AI 秘書」網站，系統將自動為您生成這集影片的重點摘要！
+> 請點擊下方連結前往「財經 AI 秘書 2.0」網站，系統將自動為您生成這集影片的重點摘要！
 
 [👉 前往網站生成 AI 摘要](https://ais-pre-gbf6utyng3ppivgpw645hj-192441689969.asia-northeast1.run.app)
     `;
@@ -204,6 +205,19 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json());
+  
+  // Basic Auth Middleware (密碼鎖)
+  app.use((req, res, next) => {
+    // 排除健康檢查和內部 CronJob 觸發的 API
+    if (req.path === '/api/health' || req.path === '/api/trigger-cron') {
+      return next();
+    }
+    return basicAuth({
+      users: { 'home30': '0355553095' },
+      challenge: true,
+      realm: 'Finance AI Secretary',
+    })(req, res, next);
+  });
   
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", hasGeminiKey: !!process.env.GEMINI_API_KEY, prefix: process.env.GEMINI_API_KEY?.substring(0, 5) });
@@ -348,7 +362,7 @@ async function startServer() {
       `;
 
       await transporter.sendMail({
-        from: process.env.FROM_EMAIL || process.env.SMTP_USER,
+        from: `"財經 AI 秘書" <${process.env.SMTP_USER}>`,
         to,
         subject,
         text: body,
@@ -370,9 +384,9 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    app.use(express.static("dist"));
+    app.use(express.static(path.join(process.cwd(), "dist")));
     app.get("*", (req, res) => {
-      res.sendFile("dist/index.html", { root: "." });
+      res.sendFile(path.join(process.cwd(), "dist", "index.html"));
     });
   }
 

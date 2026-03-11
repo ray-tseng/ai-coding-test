@@ -58,15 +58,21 @@ export default function App() {
   // Email states
   const [emails, setEmails] = useState<string[]>(() => {
     const saved = localStorage.getItem('gooaye_emails');
+    const hasUpgraded = localStorage.getItem('gooaye_upgraded_2_0');
+    
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Revert back to single email for testing
-      if (parsed.includes('rose.huang@gmail.com')) {
-        return ['r76021061@gmail.com'];
+      if (!hasUpgraded) {
+        localStorage.setItem('gooaye_upgraded_2_0', 'true');
+        if (!parsed.includes('rose.huang@gmail.com')) {
+          return [...parsed, 'rose.huang@gmail.com'];
+        }
       }
       return parsed;
     }
-    return ['r76021061@gmail.com'];
+    
+    localStorage.setItem('gooaye_upgraded_2_0', 'true');
+    return ['r76021061@gmail.com', 'rose.huang@gmail.com'];
   });
   const [newEmail, setNewEmail] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
@@ -256,7 +262,7 @@ export default function App() {
             <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center">
               <TrendingUp className="w-5 h-5 text-white" />
             </div>
-            <h1 className="font-bold text-xl tracking-tight">財經 AI 秘書</h1>
+            <h1 className="font-bold text-xl tracking-tight">財經 AI 秘書 2.0</h1>
           </div>
           <div className="flex items-center gap-4">
             <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">

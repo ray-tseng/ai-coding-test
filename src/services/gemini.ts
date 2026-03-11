@@ -49,7 +49,7 @@ export const summarizeVideo = async (channelName: string, videoUrl: string, vide
 
     if (fullText) {
       prompt = `你是一個專業的財經分析師。請幫我總結以下 ${channelName || '財經'} 的 YouTube 影片逐字稿。
-請用繁體中文，整理出以下重點（請控制在 300~500 字以內，精簡扼要）：
+請用繁體中文，詳細整理出以下重點：
 1. 本集核心主題
 2. 市場趨勢與總經分析
 3. 提到的個股或產業重點
@@ -62,7 +62,7 @@ ${fullText.substring(0, 30000)}`;
       prompt = `你是一個專業的財經分析師。請幫我搜尋並總結以下 ${channelName || '財經'} 的 YouTube 影片內容：
 影片標題/連結：${searchTarget}
 
-請用繁體中文，整理出以下重點（請控制在 300~500 字以內，精簡扼要）：
+請用繁體中文，詳細整理出以下重點：
 1. 本集核心主題
 2. 市場趨勢與總經分析
 3. 提到的個股或產業重點
@@ -74,7 +74,7 @@ ${fullText.substring(0, 30000)}`;
     }
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.1-pro-preview",
       contents: prompt,
       ...(Object.keys(config).length > 0 && { config })
     });
