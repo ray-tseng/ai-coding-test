@@ -282,6 +282,10 @@ export default function App() {
               進入系統
             </button>
           </form>
+          
+          <div className="mt-8 text-slate-400 font-mono text-sm">
+            {APP_VERSION}
+          </div>
         </motion.div>
       </div>
     );
@@ -291,12 +295,15 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 pb-56 font-sans selection:bg-slate-200">
       {/* App Header (Sticky) */}
       <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b-2 border-slate-200 shadow-sm">
-        <div className="max-w-3xl mx-auto px-4 h-20 flex items-center justify-center relative">
+        <div className="max-w-3xl mx-auto px-4 h-20 flex items-center justify-between relative">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center shadow-md">
               <TrendingUp className="w-8 h-8 text-white" />
             </div>
             <h1 className="font-extrabold text-3xl tracking-tight text-slate-900">財經 AI 秘書</h1>
+          </div>
+          <div className="text-xs font-mono text-slate-400 bg-slate-100 px-2 py-1 rounded-md hidden sm:block">
+            {APP_VERSION.replace('Release ', 'v')}
           </div>
         </div>
       </header>
