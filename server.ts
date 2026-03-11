@@ -6,15 +6,12 @@ import https from "https";
 import { marked } from "marked";
 import cron from "node-cron";
 import { YoutubeTranscript } from "youtube-transcript";
-import { GoogleGenAI } from "@google/genai";
 import fs from "fs";
 import path from "path";
 import sqlite3 from "sqlite3";
 import { open, Database } from "sqlite";
 
 dotenv.config();
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 // Supported Channels
 const CHANNELS = [
@@ -146,38 +143,28 @@ async function processChannel(channel: { id: string, name: string }) {
 
     console.log(`New video found for ${channel.name}:`, latestVideo.title);
 
-    // 1. Fetch Transcript
-    const transcriptItems = await YoutubeTranscript.fetchTranscript(latestVideo.url, { lang: 'zh-TW' })
-      .catch(() => YoutubeTranscript.fetchTranscript(latestVideo.url));
-    
-    const fullText = transcriptItems.map(item => item.text).join(' ');
-
-    // 2. Summarize
-    const prompt = `你是一個專業的財經分析師。請幫我總結以下 ${channel.name} 的 YouTube 影片逐字稿。
-請用繁體中文，整理出以下重點（請控制在 300~500 字以內，精簡扼要）：
-1. 本集核心主題
-2. 市場趨勢與總經分析
-3. 提到的個股或產業重點
-4. 講者的個人觀點與結論
-
-逐字稿內容：
-${fullText.substring(0, 30000)}`; // Limit length to avoid token limits
-
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt,
-    });
-
-    const summary = response.text || "無法生成摘要";
-
-    // 3. Send Email
+    // 3. Send Email (Notification only, since Gemini API cannot be called from backend)
     const emailsStr = process.env.CRON_EMAILS || "r76021061@gmail.com";
     const emails = emailsStr.split(",").map(e => e.trim());
     
+    const body = `
+## 最新影片上架通知
+
+**${channel.name}** 剛剛發布了最新影片：
+
+### [${latestVideo.title}](${latestVideo.url})
+
+> 💡 **溫馨提示：** 
+> 由於平台安全性限制，AI 摘要功能必須在您的瀏覽器中執行。
+> 請點擊下方連結前往「財經 AI 秘書」網站，系統將自動為您生成這集影片的重點摘要！
+
+[👉 前往網站生成 AI 摘要](https://ais-pre-gbf6utyng3ppivgpw645hj-192441689969.asia-northeast1.run.app)
+    `;
+
     await sendSummaryEmail(
       emails,
-      `[財經 AI] 最新總結：${latestVideo.title}`,
-      summary
+      `[財經 AI] 新片上架：${latestVideo.title}`,
+      body
     );
 
     // 4. Save state to DB
@@ -219,7 +206,12 @@ async function startServer() {
   app.use(express.json());
   
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
+    res.json({ status: "ok", hasGeminiKey: !!process.env.GEMINI_API_KEY, prefix: process.env.GEMINI_API_KEY?.substring(0, 5) });
+  });
+
+  // API Route: Get Runtime Config (for Docker/K8s deployments where env vars are injected at runtime)
+  app.get("/api/config", (req, res) => {
+    res.json({ geminiApiKey: process.env.GEMINI_API_KEY });
   });
 
   // API Route: Trigger Cron Job Manually (for K8s CronJob)
@@ -293,41 +285,22 @@ async function startServer() {
     });
   });
 
-  // API Route: Summarize Video
-  app.post("/api/summarize", async (req, res) => {
-    const { videoUrl, channelName } = req.body;
+  // API Route: Fetch Transcript
+  app.post("/api/transcript", async (req, res) => {
+    const { videoUrl } = req.body;
     
     if (!videoUrl) {
       return res.status(400).json({ error: "Missing videoUrl" });
     }
 
     try {
-      // 1. Fetch Transcript
       const transcriptItems = await YoutubeTranscript.fetchTranscript(videoUrl, { lang: 'zh-TW' })
         .catch(() => YoutubeTranscript.fetchTranscript(videoUrl));
-      
       const fullText = transcriptItems.map(item => item.text).join(' ');
-
-      // 2. Summarize
-      const prompt = `你是一個專業的財經分析師。請幫我總結以下 ${channelName || '財經'} 的 YouTube 影片逐字稿。
-請用繁體中文，整理出以下重點（請控制在 300~500 字以內，精簡扼要）：
-1. 本集核心主題
-2. 市場趨勢與總經分析
-3. 提到的個股或產業重點
-4. 講者的個人觀點與結論
-
-逐字稿內容：
-${fullText.substring(0, 30000)}`; // Limit length to avoid token limits
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-      });
-
-      res.json({ text: response.text || "無法生成摘要" });
-    } catch (error) {
-      console.error("Error summarizing video:", error);
-      res.status(500).json({ error: "Failed to summarize video. It might not have a transcript yet." });
+      res.json({ text: fullText });
+    } catch (error: any) {
+      console.error("Error fetching transcript:", error);
+      res.status(500).json({ error: "Failed to fetch transcript.", details: error.message || String(error) });
     }
   });
 

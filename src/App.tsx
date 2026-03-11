@@ -163,7 +163,7 @@ export default function App() {
     setEmailSent(false);
     
     try {
-      const result = await summarizeVideo(selectedChannel.name, finalUrl);
+      const result = await summarizeVideo(selectedChannel.name, finalUrl, videoInfo?.title);
       setSummary(result.text);
       setSources(result.sources);
       if (!targetUrl) setUrl('');
