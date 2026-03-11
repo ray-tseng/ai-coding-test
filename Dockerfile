@@ -21,6 +21,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# 設定環境變數為 production
+ENV NODE_ENV=production
+
 # 複製 package.json 和 package-lock.json
 COPY package*.json ./
 
