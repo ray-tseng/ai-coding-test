@@ -2,6 +2,22 @@
 
 這裡記錄了本系統所有的版本更新與功能變更。
 
+## [Release 3.0.0] - 2026-03-12
+
+### 🚀 雲端架構大升級 (迎接新生)
+- **資料庫全面雲端化**：徹底移除本地端的 SQLite 資料庫，全面升級為 **Firebase Firestore**。這是一次「不可逆」的重大架構演進，讓系統正式具備「無狀態 (Stateless)」特性。
+- **支援 GKE 橫向擴展 (Scale-out)**：解決了過去多個 Pod 實例無法共享快取的問題。現在無論 GKE 開出多少台機器，所有實例都會連線到同一個 Firestore 雲端資料庫，確保資料完全同步。
+- **無縫接軌開發與正式環境**：你在 AI Studio 測試時產生的 AI 摘要，上線到 GKE 後可以直接共用，不再浪費 Gemini API Token。
+
+### ✨ 新增功能 (Added)
+- 導入 Firebase SDK (`firebase/app`, `firebase/auth`, `firebase/firestore`)。
+- 實作 Firebase 匿名登入 (Anonymous Auth)，確保伺服器端能安全且合法地存取資料庫。
+- 新增嚴格的 `firestore.rules` 安全規則，確保寫入的資料格式正確且安全。
+- 新增 `firebase-blueprint.json` 靜態定義資料庫結構 (Schema)。
+
+### 🗑️ 移除項目 (Removed)
+- 徹底移除了所有 SQLite 相關套件 (`sqlite3`, `sqlite`, `better-sqlite3`)，大幅減輕了 Node.js 映像檔體積與原生編譯的負擔。
+
 ## [Release 2.3.c4d5e6f] - 2026-03-12
 
 ### 🚀 系統與排程優化 (System & CronJob)

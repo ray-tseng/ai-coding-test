@@ -8,8 +8,9 @@ import cron from "node-cron";
 import { YoutubeTranscript } from "youtube-transcript";
 import fs from "fs";
 import path from "path";
-import sqlite3 from "sqlite3";
-import { open, Database } from "sqlite";
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously } from 'firebase/auth';
+import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
 
 dotenv.config();
 
@@ -21,29 +22,26 @@ const CHANNELS = [
   { id: 's178_streams', handle: '@s178', type: 'streams', name: '郭哲榮分析師-摩爾證券投顧 (直播)' }
 ];
 
-let db: Database;
+let db: any;
+let auth: any;
 
 async function initDB() {
-  const dbPath = process.env.DB_PATH || path.join(process.cwd(), "database.sqlite");
-  db = await open({
-    filename: dbPath,
-    driver: sqlite3.Database
-  });
-  
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS processed_videos (
-      channel_id TEXT,
-      video_id TEXT,
-      processed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (channel_id, video_id)
-    );
-    CREATE TABLE IF NOT EXISTS video_summaries (
-      video_url TEXT PRIMARY KEY,
-      summary TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
-  console.log(`Database initialized at ${dbPath}`);
+  try {
+    const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
+    if (fs.existsSync(configPath)) {
+      const firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      const firebaseApp = initializeApp(firebaseConfig);
+      db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
+      auth = getAuth(firebaseApp);
+      
+      await signInAnonymously(auth);
+      console.log("Firebase initialized and authenticated anonymously.");
+    } else {
+      console.warn("firebase-applet-config.json not found. Firebase will not be initialized.");
+    }
+  } catch (error) {
+    console.error("Firebase init error:", error);
+  }
 }
 
 // Helper to send email
@@ -137,13 +135,17 @@ async function processChannel(channel: { id: string, handle: string, type: strin
       return;
     }
 
-    // Check if we already processed this video in SQLite
-    const row = await db.get(
-      "SELECT video_id FROM processed_videos WHERE channel_id = ? AND video_id = ?",
-      [channel.id, latestVideo.videoId]
-    );
+    // Check if we already processed this video in Firestore
+    if (!db) {
+      console.warn("DB not initialized, skipping check");
+      return;
+    }
+    
+    const docId = `${channel.id}_${latestVideo.videoId}`;
+    const docRef = doc(db, "processed_videos", docId);
+    const docSnap = await getDoc(docRef);
 
-    if (row) {
+    if (docSnap.exists()) {
       console.log(`Latest video already processed for ${channel.name}:`, latestVideo.title);
       return;
     }
@@ -175,10 +177,11 @@ async function processChannel(channel: { id: string, handle: string, type: strin
     );
 
     // 4. Save state to DB
-    await db.run(
-      "INSERT INTO processed_videos (channel_id, video_id) VALUES (?, ?)",
-      [channel.id, latestVideo.videoId]
-    );
+    await setDoc(docRef, {
+      channel_id: channel.id,
+      video_id: latestVideo.videoId,
+      processed_at: new Date().toISOString()
+    });
     console.log(`Cron job completed successfully for ${channel.name}.`);
 
   } catch (error) {
@@ -284,10 +287,15 @@ async function startServer() {
     if (!url) {
       return res.status(400).json({ error: "Missing url parameter" });
     }
+    if (!db) {
+      return res.status(500).json({ error: "Database not initialized" });
+    }
     try {
-      const row = await db.get("SELECT summary FROM video_summaries WHERE video_url = ?", [url]);
-      if (row) {
-        res.json({ summary: row.summary });
+      const docId = encodeURIComponent(url);
+      const docRef = doc(db, "video_summaries", docId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        res.json({ summary: docSnap.data().summary });
       } else {
         res.status(404).json({ error: "Summary not found" });
       }
@@ -303,11 +311,17 @@ async function startServer() {
     if (!url || !summary) {
       return res.status(400).json({ error: "Missing url or summary" });
     }
+    if (!db) {
+      return res.status(500).json({ error: "Database not initialized" });
+    }
     try {
-      await db.run(
-        "INSERT OR REPLACE INTO video_summaries (video_url, summary) VALUES (?, ?)",
-        [url, summary]
-      );
+      const docId = encodeURIComponent(url);
+      const docRef = doc(db, "video_summaries", docId);
+      await setDoc(docRef, {
+        video_url: url,
+        summary: summary,
+        created_at: new Date().toISOString()
+      });
       res.json({ success: true });
     } catch (error) {
       console.error("Error saving summary to DB:", error);

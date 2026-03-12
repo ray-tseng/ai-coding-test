@@ -1,0 +1,36 @@
+{
+  "entities": {
+    "ProcessedVideo": {
+      "title": "ProcessedVideo",
+      "description": "Records of videos that have been processed and notified",
+      "type": "object",
+      "properties": {
+        "channel_id": { "type": "string", "description": "The ID of the YouTube channel" },
+        "video_id": { "type": "string", "description": "The ID of the YouTube video" },
+        "processed_at": { "type": "string", "format": "date-time", "description": "When the video was processed" }
+      },
+      "required": ["channel_id", "video_id", "processed_at"]
+    },
+    "VideoSummary": {
+      "title": "VideoSummary",
+      "description": "Cached AI summaries for YouTube videos",
+      "type": "object",
+      "properties": {
+        "video_url": { "type": "string", "description": "The URL of the YouTube video" },
+        "summary": { "type": "string", "description": "The AI generated summary" },
+        "created_at": { "type": "string", "format": "date-time", "description": "When the summary was generated" }
+      },
+      "required": ["video_url", "summary", "created_at"]
+    }
+  },
+  "firestore": {
+    "/processed_videos/{videoId}": {
+      "schema": { "$ref": "#/entities/ProcessedVideo" },
+      "description": "Stores records of processed videos"
+    },
+    "/video_summaries/{summaryId}": {
+      "schema": { "$ref": "#/entities/VideoSummary" },
+      "description": "Stores cached video summaries"
+    }
+  }
+}
