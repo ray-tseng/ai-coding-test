@@ -63,7 +63,8 @@ kubectl get svc gooaye-summary-service -w
 
 ## 日後更新版本 (上版流程)
 
-為了確保在 Kubernetes (GKE) 環境中能穩定部署與隨時回滾 (Rollback)，**我們不再使用 `latest` 標籤**。每次上版都應該使用明確的版本號（例如 `v3.0.0`, `v3.0.1` 或是 Git Commit SHA）。
+為了確保在 Kubernetes (GKE) 環境中能穩定部署與隨時回滾 (Rollback)，**我們不再使用 `latest` 標籤**。
+**重要原因：** Docker Hub 的 CDN 機制會快取 `latest` 標籤，這會導致 Kubernetes 節點在拉取 Image 時，即使遠端已經更新，仍可能拉取到舊版的快取檔案。每次上版都必須使用明確的版本號（例如 `v3.0.1`, `v3.0.2` 或是 Git Commit SHA）來強迫 K8s 拉取最新檔案。
 
 當您修改了程式碼並需要重新部署時，請依照以下流程：
 
