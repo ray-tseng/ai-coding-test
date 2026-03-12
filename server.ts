@@ -367,8 +367,11 @@ async function startServer() {
 
     try {
       // Add a 10-second timeout to prevent hanging
+      // Try multiple languages and fallback to auto-generated subtitles
       const fetchPromise = YoutubeTranscript.fetchTranscript(videoUrl, { lang: 'zh-TW' })
-        .catch(() => YoutubeTranscript.fetchTranscript(videoUrl));
+        .catch(() => YoutubeTranscript.fetchTranscript(videoUrl, { lang: 'zh-Hant' }))
+        .catch(() => YoutubeTranscript.fetchTranscript(videoUrl, { lang: 'zh' }))
+        .catch(() => YoutubeTranscript.fetchTranscript(videoUrl)); // Fallback to whatever is available (including auto-generated)
       
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error("Transcript fetch timeout")), 10000)

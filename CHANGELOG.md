@@ -2,6 +2,14 @@
 
 這裡記錄了本系統所有的版本更新與功能變更。
 
+## [Release 3.2.0] - 2026-03-12
+
+### 🚀 系統與部署優化 (System & Deployment)
+- **字幕抓取強化 (Auto-generated CC)**：大幅強化 `youtube-transcript` 的抓取邏輯。現在系統會依序嘗試抓取 `zh-TW`、`zh-Hant`、`zh` 等多種語言代碼，若皆失敗，則會自動退而求其次抓取 YouTube 的「自動生成字幕 (Auto-generated CC)」，大幅降低因語言代碼不符而抓不到字幕的機率。
+- **Gemini 雙重備用方案 (urlContext + googleSearch)**：當影片完全沒有字幕（或剛直播完尚未生成）時，系統不再直接報錯。現在會啟動強大的備用方案，將 YouTube 網址直接餵給 Gemini (`urlContext`) 讀取網頁隱藏資訊，並搭配 Google 搜尋 (`googleSearch`) 補充最新財經時事，拼湊出高準確度的摘要。
+- **明確的免責聲明**：當系統啟用備用方案時，會在摘要最上方顯示明確的警告標語：「⚠️ **系統提示：以下內容為GEMINI透過解析 YouTube (urlContext) 與(googleSearch)生成僅供參考**」，避免使用者將 AI 推測的內容誤認為講者的原意。
+- **未來架構規劃 (Roadmap)**：確認了未來若要追求 100% 準確率的終極解法，需採用「地端 yt-dlp 下載音檔 ➡️ 地端 Whisper 轉文字 ➡️ Gemini API 摘要」的架構，目前 V1 版本先以雲端高性價比方案上線。
+
 ## [Release 3.1.0] - 2026-03-12
 
 ### 🚀 系統與部署優化 (System & Deployment)

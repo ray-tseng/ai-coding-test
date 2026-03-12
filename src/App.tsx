@@ -45,7 +45,7 @@ const CHANNELS = [
   { id: 's178_streams', handle: '@s178', type: 'streams', shortName: '郭哲榮 (直播)', name: '郭哲榮分析師-摩爾證券投顧 (直播)' }
 ];
 
-const APP_VERSION = 'Release 3.1.0';
+const APP_VERSION = 'Release 3.2.0';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -159,9 +159,9 @@ export default function App() {
       setSummary(result.text);
       setSources(result.sources);
       if (!targetUrl) setUrl('');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError('分析過程中發生錯誤，請稍後再試。');
+      setError(err.message || '分析過程中發生錯誤，請稍後再試。');
     } finally {
       setLoading(false);
     }

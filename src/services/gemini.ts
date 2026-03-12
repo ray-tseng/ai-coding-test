@@ -35,20 +35,10 @@ export const summarizeVideo = async (channelName: string, videoUrl: string, vide
         const data = await transcriptRes.json();
         fullText = data.text;
       } else {
-        const errorData = await transcriptRes.json().catch(() => ({}));
-        if (transcriptRes.status === 404 || errorData.error === "Transcript not available") {
-          throw new Error("這支影片沒有提供字幕，或者作者關閉了字幕功能，無法進行 AI 分析。");
-        } else {
-          throw new Error(errorData.error || "無法取得影片字幕，請稍後再試。");
-        }
+        console.warn("Transcript not available, falling back to search.");
       }
     } catch (e: any) {
-      console.error("Failed to fetch transcript:", e);
-      throw new Error(e.message || "無法取得影片字幕，請稍後再試。");
-    }
-
-    if (!fullText || fullText.trim() === "") {
-      throw new Error("這支影片沒有提供字幕，或者作者關閉了字幕功能，無法進行 AI 分析。");
+      console.warn("Failed to fetch transcript, falling back to search:", e);
     }
 
     // 2. Initialize Gemini AI
@@ -73,7 +63,12 @@ export const summarizeVideo = async (channelName: string, videoUrl: string, vide
 
     const ai = new GoogleGenAI({ apiKey });
 
-    let prompt = `你是一個專業的財經分析師。請幫我總結以下 ${channelName || '財經'} 的 YouTube 影片逐字稿。
+    let prompt = "";
+    let config: any = {};
+    let isFallback = false;
+
+    if (fullText && fullText.trim() !== "") {
+      prompt = `你是一個專業的財經分析師。請幫我總結以下 ${channelName || '財經'} 的 YouTube 影片逐字稿。
 請用繁體中文，詳細整理出以下重點：
 1. 本集核心主題
 2. 市場趨勢與總經分析
@@ -82,13 +77,35 @@ export const summarizeVideo = async (channelName: string, videoUrl: string, vide
 
 逐字稿內容：
 ${fullText.substring(0, 30000)}`;
+    } else {
+      isFallback = true;
+      const searchTarget = videoTitle ? `${channelName} ${videoTitle}` : `${channelName} ${videoUrl}`;
+      prompt = `你是一個專業的財經分析師。請幫我總結以下 ${channelName || '財經'} 的 YouTube 影片內容：
+影片標題：${searchTarget}
+影片連結：${videoUrl}
+
+請用繁體中文，詳細整理出以下重點：
+1. 本集核心主題
+2. 市場趨勢與總經分析
+3. 提到的個股或產業重點
+4. 講者的個人觀點與結論`;
+      
+      config = {
+        tools: [{ googleSearch: {} }, { urlContext: {} }]
+      };
+    }
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: prompt
+      contents: prompt,
+      ...(Object.keys(config).length > 0 && { config })
     });
 
-    const summaryText = response.text || "無法生成摘要";
+    let summaryText = response.text || "無法生成摘要";
+    
+    if (isFallback && summaryText !== "無法生成摘要") {
+      summaryText = `> ⚠️ **系統提示：以下內容為GEMINI透過解析 YouTube (urlContext) 與(googleSearch)生成僅供參考**\n\n---\n\n` + summaryText;
+    }
 
     // Save to cache
     if (summaryText !== "無法生成摘要") {
