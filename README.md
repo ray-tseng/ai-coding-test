@@ -4,6 +4,28 @@
 
 本專案包含將「股癌/游庭皓影片摘要服務」部署至 Kubernetes (K8s) 的相關設定檔。
 
+## 環境準備 (非常重要)
+
+因為資安考量，Firebase 的設定檔 `firebase-applet-config.json` 已經被加入 `.gitignore`，不會跟著程式碼上傳到 GitHub。
+因此，在您進行**本機開發**或**打包 Docker Image** 之前，請務必在專案根目錄手動建立此檔案：
+
+請在專案根目錄建立 `firebase-applet-config.json`，並填入您的 Firebase 設定：
+
+```json
+{
+  "projectId": "您的_PROJECT_ID",
+  "appId": "您的_APP_ID",
+  "apiKey": "您的_API_KEY",
+  "authDomain": "您的_AUTH_DOMAIN",
+  "firestoreDatabaseId": "您的_DATABASE_ID",
+  "storageBucket": "您的_STORAGE_BUCKET",
+  "messagingSenderId": "您的_SENDER_ID",
+  "measurementId": ""
+}
+```
+
+---
+
 ## 部署流程
 
 ### 1. 建立敏感資訊 Secret (非常重要)
