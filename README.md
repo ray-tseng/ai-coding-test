@@ -41,33 +41,47 @@ kubectl get svc gooaye-summary-service -w
 
 ## 日後更新版本 (上版流程)
 
+為了確保在 Kubernetes (GKE) 環境中能穩定部署與隨時回滾 (Rollback)，**我們不再使用 `latest` 標籤**。每次上版都應該使用明確的版本號（例如 `v3.0.0`, `v3.0.1` 或是 Git Commit SHA）。
+
 當您修改了程式碼並需要重新部署時，請依照以下流程：
 
-### 1. 在本機打包並上傳 Image
+### 1. 在本機打包並上傳 Image (標記明確版號)
 ```bash
-# 建立 Docker Image (請將 r76021061 替換為您的帳號)
-docker build -t r76021061/gooaye-summary:latest .
+# 設定本次上版的版本號 (例如 v3.0.1)
+export VERSION=v3.0.1
+
+# 建立 Docker Image (請將 r76021061 替換為您的 Docker Hub 帳號)
+docker build -t r76021061/gooaye-summary:$VERSION .
 
 # 推送到 Docker Hub
-docker push r76021061/gooaye-summary:latest
+docker push r76021061/gooaye-summary:$VERSION
 ```
 
-### 2. 在 K8s 節點更新服務
-到能控制 K8s 的節點上：
+### 2. 在 K8s 叢集更新服務 (Zero Downtime Deployment)
+有兩種方式可以更新 K8s 上的服務版本：
+
+**方法 A：直接使用指令更新 Image (推薦，最快速)**
 ```bash
-# 取得最新程式碼
-git clone <您的專案網址> project
-cd project
-
-# 重新套用設定檔 (如果有修改 yaml 的話)
-kubectl apply -f ./gke/pvc.yaml
-kubectl apply -f ./gke/deployment.yaml
-kubectl apply -f ./gke/configmap.yaml
-kubectl apply -f ./gke/cronjob.yaml
-kubectl apply -f ./gke/service.yaml
-
-# 強制讓 Deployment 重新拉取最新的 Image 並重啟 Pod
-kubectl rollout restart deployment gooaye-summary-app
+# 讓 Deployment 直接換上新的 Image 版本，K8s 會自動進行滾動更新 (Rolling Update)
+kubectl set image deployment/gooaye-summary-app gooaye-summary=r76021061/gooaye-summary:v3.0.1
 ```
 
-> **注意**：請記得先將 `gke/deployment.yaml` 內的 `image: r76021061/gooaye-summary:latest` 替換成您實際的 Docker Hub 帳號與 Image 名稱。
+**方法 B：修改 YAML 檔案後套用 (適合 GitOps 流程)**
+1. 打開 `./gke/deployment.yaml`
+2. 將 `image: r76021061/gooaye-summary:v3.0.0` 修改為新的版本號 `v3.0.1`
+3. 執行套用指令：
+```bash
+kubectl apply -f ./gke/deployment.yaml
+```
+
+### 3. 檢查上版狀態
+您可以透過以下指令確認新版本是否已經成功啟動：
+```bash
+# 查看滾動更新的進度
+kubectl rollout status deployment/gooaye-summary-app
+
+# 如果新版本有問題需要退回上一版 (Rollback)
+kubectl rollout undo deployment/gooaye-summary-app
+```
+
+> **注意**：請記得將指令中的 `r76021061/gooaye-summary` 替換成您實際的 Docker Hub 帳號與 Image 名稱。
