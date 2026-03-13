@@ -13,13 +13,13 @@
 
 ```json
 {
-  "projectId": "您的_PROJECT_ID",
-  "appId": "您的_APP_ID",
-  "apiKey": "您的_API_KEY",
-  "authDomain": "您的_AUTH_DOMAIN",
-  "firestoreDatabaseId": "您的_DATABASE_ID",
-  "storageBucket": "您的_STORAGE_BUCKET",
-  "messagingSenderId": "您的_SENDER_ID",
+  "projectId": "gen-lang-client-0786862796",
+  "appId": "1:303942337841:web:f80174299b3b3e10c2dc10",
+  "apiKey": "AIzaSyD2PIahhhv9qnMS9b8QXafmP5zUL3Tgzi4",
+  "authDomain": "gen-lang-client-0786862796.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-7be390c8-8f5e-42ea-8fb4-84b354ce7af1",
+  "storageBucket": "gen-lang-client-0786862796.firebasestorage.app",
+  "messagingSenderId": "303942337841",
   "measurementId": ""
 }
 ```
@@ -77,8 +77,8 @@ kubectl get svc gooaye-summary-service -w
 
 ### 1. 在本機打包並上傳 Image (標記明確版號)
 ```bash
-# 設定本次上版的版本號 (例如 v3.1.0)
-export VERSION=v3.1.0
+# 設定本次上版的版本號 (例如 v3.2.2)
+export VERSION=v3.2.2
 
 # 建立 Docker Image (請將 r76021061 替換為您的 Docker Hub 帳號)
 docker build -t r76021061/gooaye-summary:$VERSION .
@@ -88,20 +88,20 @@ docker push r76021061/gooaye-summary:$VERSION
 ```
 
 ### 2. 在 K8s 叢集更新服務 (Zero Downtime Deployment)
-有三種方式可以更新 K8s 上的服務版本：
 
-**方法 A：直接使用指令更新 Image (推薦，最快速)**
+為了保持 `deployment.yaml` 的靜態與乾淨，我們在檔案中使用了 `VERSION_PLACEHOLDER` 作為佔位符。
+請使用 `sed` 指令將環境變數動態替換進去，並直接 pipe 給 `kubectl apply`：
+
+**方法 A：動態替換版號並部署 (推薦，最乾淨)**
 ```bash
-# 讓 Deployment 直接換上新的 Image 版本，K8s 會自動進行滾動更新 (Rolling Update)
-kubectl set image deployment/gooaye-summary-app gooaye-summary=r76021061/gooaye-summary:v3.1.0
+# 使用 sed 將 VERSION_PLACEHOLDER 替換為實際版號，並直接套用 (不會修改到原始的 yaml 檔案)
+sed "s/VERSION_PLACEHOLDER/$VERSION/g" ./gke/deployment.yaml | kubectl apply -f -
 ```
 
-**方法 B：修改 YAML 檔案後套用 (適合 GitOps 流程)**
-1. 打開 `./gke/deployment.yaml`
-2. 將 `image: r76021061/gooaye-summary:v3.0.3` 修改為新的版本號 `v3.1.0`
-3. 執行套用指令：
+**方法 B：直接使用指令更新 Image (最快速)**
 ```bash
-kubectl apply -f ./gke/deployment.yaml
+# 讓 Deployment 直接換上新的 Image 版本，K8s 會自動進行滾動更新 (Rolling Update)
+kubectl set image deployment/gooaye-summary-app gooaye-summary=r76021061/gooaye-summary:$VERSION
 ```
 
 **方法 C：強制重啟 Pod 拉取最新 Image (當您覆蓋了同一個 Tag 時使用)**
