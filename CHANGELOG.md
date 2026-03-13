@@ -2,6 +2,11 @@
 
 這裡記錄了本系統所有的版本更新與功能變更。
 
+## [Release 3.2.1] - 2026-03-12
+
+### 🐛 問題修正 (Bug Fixes)
+- **修復 GKE 部署遺失 Firebase 設定檔問題**：修正了 `Dockerfile` 在生產環境打包階段（Production Stage）遺漏複製 `firebase-applet-config.json` 的問題。這導致 GKE 上的容器啟動時無法初始化 Firebase，進而造成 `/api/summary` 快取 API 失效，迫使系統每次都重新呼叫 Gemini 進行分析。現在設定檔已正確打包進映像檔，快取功能恢復正常。
+
 ## [Release 3.2.0] - 2026-03-12
 
 ### 🚀 系統與部署優化 (System & Deployment)
